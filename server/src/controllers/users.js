@@ -3,7 +3,10 @@ const fs = require("fs");
 
 const User = require("../models/users");
 const dev = require("../config");
-const { securePassword, comparePassword} = require("../helpers/bcryptPassword");
+const {
+  securePassword,
+  comparePassword,
+} = require("../helpers/bcryptPassword");
 const { sendEmailWithNodeMailer } = require("../helpers/email");
 
 const registerUser = async (req, res) => {
@@ -148,30 +151,31 @@ const loginUser = async (req, res) => {
     }
 
     // check that user email exist
-    const userExist = await User.findOne({ email });
-    if (!userExist) {
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(404).json({
         message: "user with this email does not exist. Please register.",
       });
     }
 
-    const isPasswordMatch = await comparePassword(password, userExist.password)
-    if(!isPasswordMatch) {
+    const isPasswordMatch = await comparePassword(password, user.password);
+
+    if (!isPasswordMatch) {
       return res.status(400).json({
         message: "email/password mismatched",
       });
     }
 
-    // create session for user profile
-
-
+    // create session for user
+    req.session.userId = user._id;
+    console.log()
 
     res.status(200).json({
       message: "Login successful",
-      userExist: {
-        name: userExist.name,
-        email: userExist.email
-      }
+      user: {
+        name: user.name,
+        email: user.email,
+      },
     });
   } catch (err) {
     res.status(500).json({
@@ -181,11 +185,15 @@ const loginUser = async (req, res) => {
 };
 const logoutUser = async (req, res) => {
   try {
+    req.session.destroy();
+    res.clearCookie('user_session');
     res.status(200).json({
+      ok: true,
       message: "Logout successful",
     });
   } catch (err) {
     res.status(500).json({
+      ok: false,
       message: err.message,
     });
   }
@@ -203,4 +211,10 @@ const userProfile = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, verifyEmail, loginUser, logoutUser, userProfile };
+module.exports = {
+  registerUser,
+  verifyEmail,
+  loginUser,
+  logoutUser,
+  userProfile,
+};
