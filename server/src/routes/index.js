@@ -9,7 +9,7 @@ const {
   verifyEmail,
   loginUser,
   logoutUser,
-  userProfile,
+  userProfile, deleteUser, updateUser,
 } = require("../controllers/users");
 const { isLoggedIn, isLoggedOut} = require("../middlewares/auth");
 
@@ -28,6 +28,8 @@ userRouter.post("/register", formidable(), registerUser);
 userRouter.post("/verify-email", verifyEmail);
 userRouter.post("/login", isLoggedOut, loginUser);
 userRouter.get("/logout", logoutUser);
-userRouter.get("/profile", isLoggedIn, userProfile);
+userRouter.get("/", isLoggedIn, userProfile);
+userRouter.delete("/", isLoggedIn, deleteUser);
+userRouter.put("/", formidable(), isLoggedIn, updateUser);
 
 module.exports = userRouter;

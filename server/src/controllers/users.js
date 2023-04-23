@@ -116,8 +116,8 @@ const verifyEmail = async (req, res) => {
       });
 
       if (avatar) {
-        newUser.avatar.data = fs.readFileSync(avatar.path);
         newUser.avatar.contentType = avatar.type;
+        newUser.avatar.data = fs.readFileSync(avatar.path);
       }
 
       // save the user
@@ -168,7 +168,7 @@ const loginUser = async (req, res) => {
 
     // create session for user
     req.session.userId = user._id;
-    console.log()
+    console.log();
 
     res.status(200).json({
       message: "Login successful",
@@ -186,7 +186,7 @@ const loginUser = async (req, res) => {
 const logoutUser = async (req, res) => {
   try {
     req.session.destroy();
-    res.clearCookie('user_session');
+    res.clearCookie("user_session");
     res.status(200).json({
       ok: true,
       message: "Logout successful",
@@ -200,9 +200,59 @@ const logoutUser = async (req, res) => {
 };
 
 const userProfile = async (req, res) => {
+  const userData = await User.findById(req.session.userId, { password: 0 });
   try {
     res.status(200).json({
+      ok: true,
       message: "Returns User Profile",
+      userData,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.session.userId);
+    res.status(200).json({
+      message: "User deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    const updatedData = await User.findByIdAndUpdate(
+      req.session.userId,
+      { ...req.fields },
+      { new: true }
+    );
+
+    if(!updatedData) {
+      return res.status(400).json({
+        ok: false,
+        message: "User was not updated",
+      });
+    }
+
+    if(req.files.avatar) {
+      const { avatar } = req.files;
+      updatedData.avatar.contentType = avatar.type;
+      updatedData.avatar.data = fs.readFileSync(avatar.path);
+    }
+
+    await updatedData.save();
+
+    res.status(200).json({
+      ok: true,
+      message: "User updated successfully",
     });
   } catch (err) {
     res.status(500).json({
@@ -217,4 +267,6 @@ module.exports = {
   loginUser,
   logoutUser,
   userProfile,
+  deleteUser,
+  updateUser,
 };
