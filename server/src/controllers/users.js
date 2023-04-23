@@ -183,6 +183,7 @@ const loginUser = async (req, res) => {
     });
   }
 };
+
 const logoutUser = async (req, res) => {
   try {
     req.session.destroy();
@@ -230,19 +231,28 @@ const deleteUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const updatedData = await User.findByIdAndUpdate(
+      // if password can be changed then hash it
+      // if(req.fields.password) {
+      //   return res.status(404).json({
+      //     message: "Password cannot be empty"
+      //   })
+      // }
+      // const hashedpassword = await securePassword(req.fields.password)
+      // {...req.fields, password: hashedPassword}
+
       req.session.userId,
       { ...req.fields },
       { new: true }
     );
 
-    if(!updatedData) {
+    if (!updatedData) {
       return res.status(400).json({
         ok: false,
         message: "User was not updated",
       });
     }
 
-    if(req.files.avatar) {
+    if (req.files.avatar) {
       const { avatar } = req.files;
       updatedData.avatar.contentType = avatar.type;
       updatedData.avatar.data = fs.readFileSync(avatar.path);
@@ -261,6 +271,112 @@ const updateUser = async (req, res) => {
   }
 };
 
+const forgetPassword = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(404).json({
+        message: "",
+      });
+    }
+
+    // check if user exist with the email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        ok: false,
+        message: "User was not found with this email address",
+      });
+    }
+
+    // secure the password
+    const hashedPassword = await securePassword(password);
+
+    // store the user data temporarily in jwt waiting for email verification
+    const token = jwt.sign({ email, hashedPassword }, dev.app.jwtSecretKey, {
+      expiresIn: "10m",
+    });
+
+    // send verification mail with defined transport object
+    // route parameter <p>Please click <a href="${dev.app.clientUrl}/api/users/activate/${token}" target="_blank">here to activate your account</a></p>
+    const emailData = {
+      email,
+      subject: "Reset Pasword",
+      html: `
+      <h2>Good Morning ${user.name}</h2>
+      <p>Please click <a href="${dev.app.clientUrl}/api/users/reset-password/?token=${token}" target="_blank">here to reset your password</a></p>
+      <p>
+        <b>Mercy Ikpe. <br>
+            <em>FullStack Dev</em>
+        </b>  
+      </p>`, // html body
+    };
+
+    await sendEmailWithNodeMailer(emailData);
+
+    res.status(200).json({
+      ok: true,
+      message: "An email has been sent for resetting password",
+      token,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(404).json({
+        message: "token is missing",
+      });
+    }
+    jwt.verify(token, dev.app.jwtSecretKey, async function (err, decoded) {
+      if (err) {
+        return res.status(401).json({
+          message: "Token has expired.",
+        });
+      }
+
+      const { email, hashedPassword } = decoded;
+
+      const userExist = await User.findOne({ email });
+      if (!userExist) {
+        return res.status(400).json({
+          message: "User already with this email",
+        });
+      }
+
+      // update the user
+      const updateData = await User.updateOne(
+        { email },
+        {
+          $set: {
+            password: hashedPassword,
+          },
+        }
+      );
+
+      if (!updateData) {
+        return res.status(201).json({
+          message: "Reset password was unsuccessful",
+        });
+      }
+      res.status(201).json({
+        message: "Reset password was successful",
+      });
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   verifyEmail,
@@ -269,4 +385,6 @@ module.exports = {
   userProfile,
   deleteUser,
   updateUser,
+  forgetPassword,
+  resetPassword,
 };
