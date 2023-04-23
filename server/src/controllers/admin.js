@@ -1,7 +1,11 @@
 const jwt = require("jsonwebtoken");
 
+const exceljs = require("exceljs");
+
+
 const User = require("../models/users");
 const dev = require("../config");
+
 const { comparePassword } = require("../helpers/bcryptPassword");
 const {
   errorResponse,
@@ -124,10 +128,53 @@ const updateUserByAdmin = async (req, res) => {
   }
 };
 
+const exportUsers = async (req, res) => {
+  try {
+    const workbook = new exceljs.Workbook();
+    const worksheet = workbook.addWorksheet('Users');
+    worksheet.columns = [
+      { header: 'Name', key: 'name'},
+      { header: 'email', key: 'email'},
+      { header: 'Phone Number', key: 'phone'},
+      { header: 'Profile Picture', key: 'avatar'},
+      { header: 'Is Admin', key: 'is_admin'},
+      { header: 'Is Verified', key: 'is_verified'},
+      { header: 'Is Banned', key: 'is_banned'},
+    ];
+
+    // fetch all the user's data
+    const userData = await User.find()
+
+    // map through the user
+    userData.map((user) => {
+      worksheet.addRow(user);
+    });
+
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true };
+    });
+
+    res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    res.setHeader(
+        'Content-Disposition',
+        'attachment; filename=' + 'users.xlsx'
+    )
+    return workbook.xlsx.write(res).then(() => {
+      res.status(200).end();
+    })
+  } catch (err) {
+    errorResponse(res, 500, err.message);
+  }
+};
+
 module.exports = {
   loginAdmin,
   logoutAdmin,
   getAllUsers,
   updateUserByAdmin,
   deleteUserByAdmin,
+  exportUsers
 };

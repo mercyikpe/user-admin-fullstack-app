@@ -10,7 +10,7 @@ const {
   loginAdmin,
   logoutAdmin,
   getAllUsers,
-  deleteUserByAdmin, updateUserByAdmin,
+  deleteUserByAdmin, updateUserByAdmin, exportUsers,
 } = require("../controllers/admin");
 
 // create session
@@ -29,6 +29,8 @@ adminRouter.get("/logout", isLoggedIn, logoutAdmin);
 adminRouter.get("/dashboard", isLoggedIn, getAllUsers);
 adminRouter.put("/dashboard/:id", isLoggedIn, isAdmin, updateUserByAdmin);
 adminRouter.delete("/dashboard/:id", isLoggedIn, isAdmin, deleteUserByAdmin);
+
+adminRouter.get("/dashboard/export-user-data", exportUsers);
 
 // admin - login, logout, admin crud, user crud, forget password, reset password
 
