@@ -30,17 +30,27 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Phone number is required"],
     },
+    // avatar: {
+    //   // data: Buffer,
+    //   data: String,
+    //   default: "../public/images/user.png",
+    //   // contentType: String,
+    // },
     avatar: {
-      data: Buffer,
-      contentType: String,
+      type: String,
+      default: "../public/images/user.png",
     },
     is_admin: {
-      type: Number,
-      default: 0,
+      type: Boolean,
+      default: false,
+    },
+    is_Banned: {
+      type: Boolean,
+      default: false,
     },
     is_verified: {
-      type: Number,
-      default: 0,
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

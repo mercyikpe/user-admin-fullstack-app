@@ -11,8 +11,10 @@ const { sendEmailWithNodeMailer } = require("../helpers/email");
 
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.fields;
-    const { avatar } = req.files;
+    const { name, email, password, phone } = req.body;
+    // const { avatar } = req.file.filename;
+    const avatar = req.file && req.file.filename;
+
 
     // check that form fields are not empty
     if (!name || !email || !password || !phone) {
@@ -25,13 +27,6 @@ const registerUser = async (req, res) => {
     if (password.length < 6) {
       return res.status(404).json({
         message: "min length for password is 6",
-      });
-    }
-
-    // check that image size does not exit 1MB
-    if (avatar && avatar.size > 1000000) {
-      return res.status(404).json({
-        message: "Max size of image is 1MB",
       });
     }
 
@@ -112,12 +107,12 @@ const verifyEmail = async (req, res) => {
         email,
         password: hashedPassword,
         phone,
-        is_verified: 1,
+        is_verified: true,
       });
 
       if (avatar) {
-        newUser.avatar.contentType = avatar.type;
         newUser.avatar.data = fs.readFileSync(avatar.path);
+        newUser.avatar.contentType = avatar.type;
       }
 
       // save the user
@@ -156,6 +151,12 @@ const loginUser = async (req, res) => {
       return res.status(404).json({
         message: "user with this email does not exist. Please register.",
       });
+    }
+
+    if(user.is_Banned) {
+      return res.status(401).json({
+        message: "user is banned"
+      })
     }
 
     const isPasswordMatch = await comparePassword(password, user.password);
@@ -201,8 +202,8 @@ const logoutUser = async (req, res) => {
 };
 
 const userProfile = async (req, res) => {
-  const userData = await User.findById(req.session.userId, { password: 0 });
   try {
+    const userData = await User.findById(req.session.userId, { password: 0 });
     res.status(200).json({
       ok: true,
       message: "Returns User Profile",
@@ -230,20 +231,16 @@ const deleteUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const updatedData = await User.findByIdAndUpdate(
-      // if password can be changed then hash it
-      // if(req.fields.password) {
-      //   return res.status(404).json({
-      //     message: "Password cannot be empty"
-      //   })
-      // }
-      // const hashedpassword = await securePassword(req.fields.password)
-      // {...req.fields, password: hashedPassword}
 
+    const hashedPassword = await securePassword(req.body.password);
+
+    const updatedData = await User.findByIdAndUpdate(
       req.session.userId,
-      { ...req.fields },
+      { ...req.body, password: hashedPassword, avatar: req.file},
       { new: true }
     );
+
+    await updatedData.save();
 
     if (!updatedData) {
       return res.status(400).json({
@@ -251,14 +248,6 @@ const updateUser = async (req, res) => {
         message: "User was not updated",
       });
     }
-
-    if (req.files.avatar) {
-      const { avatar } = req.files;
-      updatedData.avatar.contentType = avatar.type;
-      updatedData.avatar.data = fs.readFileSync(avatar.path);
-    }
-
-    await updatedData.save();
 
     res.status(200).json({
       ok: true,
@@ -302,7 +291,7 @@ const forgetPassword = async (req, res) => {
     // route parameter <p>Please click <a href="${dev.app.clientUrl}/api/users/activate/${token}" target="_blank">here to activate your account</a></p>
     const emailData = {
       email,
-      subject: "Reset Pasword",
+      subject: "Reset Password",
       html: `
       <h2>Good Morning ${user.name}</h2>
       <p>Please click <a href="${dev.app.clientUrl}/api/users/reset-password/?token=${token}" target="_blank">here to reset your password</a></p>

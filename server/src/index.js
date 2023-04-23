@@ -5,7 +5,8 @@ const cookieParser = require('cookie-parser')
 
 const dev = require("./config");
 const connectDatabase = require('./config/db')
-const userRouter = require("./routes");
+const userRouter = require("./routes/usersRoute");
+const adminRouter = require("./routes/adminRoute");
 
 const app = express();
 
@@ -18,7 +19,9 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
 app.use('/api/users', userRouter);
+app.use('/api/admin', adminRouter);
 
 // test route
 app.get("/", (req, res) => {
