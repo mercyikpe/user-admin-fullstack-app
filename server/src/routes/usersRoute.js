@@ -10,9 +10,13 @@ const {
   verifyEmail,
   loginUser,
   logoutUser,
-  userProfile, deleteUser, updateUser, forgetPassword, resetPassword,
+  userProfile,
+  deleteUser,
+  updateUser,
+  forgetPassword,
+  resetPassword,
 } = require("../controllers/users");
-const { isLoggedIn, isLoggedOut} = require("../middlewares/auth");
+const { isLoggedIn, isLoggedOut } = require("../middlewares/auth");
 
 // create session
 userRouter.use(
@@ -25,22 +29,21 @@ userRouter.use(
   })
 );
 
-
-userRouter.post("/register", upload.single('avatar'), registerUser);
+userRouter.post("/register", upload.single("avatar"), registerUser);
 userRouter.post("/verify-email", verifyEmail);
 userRouter.post("/login", isLoggedOut, loginUser);
 userRouter.get("/logout", isLoggedIn, logoutUser);
 userRouter
-    .route('/')
-    .get(isLoggedIn, userProfile)
-    .delete(isLoggedIn, deleteUser)
-    .put( isLoggedIn, upload.single('avatar'), updateUser);
+  .route("/")
+  .get(isLoggedIn, userProfile)
+  .delete(isLoggedIn, deleteUser)
+  .put(isLoggedIn, upload.single("avatar"), updateUser);
 userRouter.post("/forget-password", isLoggedOut, forgetPassword);
 userRouter.post("/reset-password", isLoggedOut, resetPassword);
 userRouter.get("*", (req, res) => {
-    res.status(404).json({
-        message: "404 not found",
-    });
+  res.status(404).json({
+    message: "404 not found",
+  });
 });
 // forget password -> email, new password, -> verification email -> reset password controller -> update the password if token is verified
 // forget password -> email -> sendEmail -> reset link -> new password -> update the password

@@ -30,12 +30,6 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Phone number is required"],
     },
-    // avatar: {
-    //   // data: Buffer,
-    //   data: String,
-    //   default: "../public/images/user.png",
-    //   // contentType: String,
-    // },
     avatar: {
       type: String,
       default: "../public/images/user.png",
@@ -44,7 +38,7 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    is_Banned: {
+    is_banned: {
       type: Boolean,
       default: false,
     },

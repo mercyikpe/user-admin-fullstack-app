@@ -10,7 +10,9 @@ const {
   loginAdmin,
   logoutAdmin,
   getAllUsers,
-  deleteUserByAdmin, updateUserByAdmin, exportUsers,
+  deleteUserByAdmin,
+  updateUserByAdmin,
+  exportUsers,
 } = require("../controllers/admin");
 
 // create session

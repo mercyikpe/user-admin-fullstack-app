@@ -1,12 +1,23 @@
 # User Admin Management
 
-1. Bootstrapping of the backend
-   - setup project folder: src -> models, controllers, routes, helpers, middlewares, config, validators
-   - setup environment variables
-   - create and run the basic server
-   - connect to mongodb atlas
+## Features
 
-2. Create user
-   - create schema and models
-     - required: name, email, password and phone
-3. 
+### Users
+- Register user
+- Verify user
+- Login user
+- Logout user
+- View user profile
+- Delete user
+- Update user
+- Forget password
+- Reset password
+
+### Admin
+- Login Admin
+- Logout Admin
+- Register a user
+- View all users except admins
+- Delete a user by Id
+- Update a user by Id
+- Export user data to a spreadsheet

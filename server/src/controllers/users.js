@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-const fs = require("fs");
 
 const User = require("../models/users");
 const dev = require("../config");
@@ -8,6 +7,10 @@ const {
   comparePassword,
 } = require("../helpers/bcryptPassword");
 const { sendEmailWithNodeMailer } = require("../helpers/email");
+const {
+  errorResponse,
+  successResponse,
+} = require("../helpers/responseHandlers");
 
 const registerUser = async (req, res) => {
   try {
@@ -15,27 +18,20 @@ const registerUser = async (req, res) => {
     // const { avatar } = req.file.filename;
     const avatar = req.file && req.file.filename;
 
-
     // check that form fields are not empty
     if (!name || !email || !password || !phone) {
-      return res.status(404).json({
-        message: "name, email, password or phone is missing",
-      });
+      errorResponse(res, 400, "name, email, password or phone is missing");
     }
 
     // check password length
     if (password.length < 6) {
-      return res.status(404).json({
-        message: "min length for password is 6",
-      });
+      errorResponse(res, 400, "min length for password is 6");
     }
 
     // check that user email does not exist
     const userExist = await User.findOne({ email });
     if (userExist) {
-      return res.status(400).json({
-        message: "User already with this email",
-      });
+      errorResponse(res, 400, "User already with this email");
     }
 
     // secure the password
@@ -66,14 +62,14 @@ const registerUser = async (req, res) => {
 
     await sendEmailWithNodeMailer(emailData);
 
-    res.status(201).json({
-      message: "A verification link has been sent to your email",
-      token,
-    });
+    successResponse(
+      res,
+      201,
+      "A verification link has been sent to your email",
+      token
+    );
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 400, err.message);
   }
 };
 
@@ -81,24 +77,18 @@ const verifyEmail = async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) {
-      return res.status(404).json({
-        message: "token is missing",
-      });
+      errorResponse(res, 404, "token is missing");
     }
     jwt.verify(token, dev.app.jwtSecretKey, async function (err, decoded) {
       if (err) {
-        return res.status(401).json({
-          message: "Token has expired, please register again",
-        });
+        errorResponse(res, 401, "Token has expired, please register again");
       }
 
       const { name, email, hashedPassword, avatar, phone } = decoded;
 
       const userExist = await User.findOne({ email });
       if (userExist) {
-        return res.status(400).json({
-          message: "User already with this email",
-        });
+        errorResponse(res, 400, "User already with this email");
       }
 
       // create the user
@@ -111,27 +101,22 @@ const verifyEmail = async (req, res) => {
       });
 
       if (avatar) {
-        newUser.avatar.data = fs.readFileSync(avatar.path);
-        newUser.avatar.contentType = avatar.type;
+        newUser.avatar;
+        // newUser.avatar.data = fs.readFileSync(avatar.path);
+        // newUser.avatar.contentType = avatar.type;
       }
 
       // save the user
       const user = await newUser.save();
 
       if (!user) {
-        return res.status(400).json({
-          message: "User was not created",
-        });
+        errorResponse(res, 400, "User was not created");
       }
 
-      res.status(201).json({
-        message: "User was created. Ready to sign in",
-      });
+      successResponse(res, 201, "User was created. Ready to sign in");
     });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
@@ -140,48 +125,38 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
     // check that form fields are not empty
     if (!email || !password) {
-      return res.status(404).json({
-        message: "Email or password is missing",
-      });
+      errorResponse(res, 404, "Email or password is missing");
     }
 
     // check that user email exist
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({
-        message: "user with this email does not exist. Please register.",
-      });
+      errorResponse(
+        res,
+        400,
+        "user with this email does not exist. Please register"
+      );
     }
 
-    if(user.is_Banned) {
-      return res.status(401).json({
-        message: "user is banned"
-      })
-    }
+    if (user.is_banned) errorResponse(res, 400, "user is banned");
 
     const isPasswordMatch = await comparePassword(password, user.password);
 
-    if (!isPasswordMatch) {
-      return res.status(400).json({
-        message: "email/password mismatched",
-      });
-    }
+    if (!isPasswordMatch) errorResponse(res, 400, "email/password mismatched");
 
     // create session for user
     req.session.userId = user._id;
-    console.log();
 
-    res.status(200).json({
-      message: "Login successful",
-      user: {
-        name: user.name,
-        email: user.email,
-      },
-    });
+    successResponse(res, 200, "Login successful", user(data.name, user.email));
+    // res.status(200).json({
+    //   message: "Login successful",
+    //   user: {
+    //     name: user.name,
+    //     email: user.email,
+    //   },
+    // });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
@@ -189,74 +164,53 @@ const logoutUser = async (req, res) => {
   try {
     req.session.destroy();
     res.clearCookie("user_session");
-    res.status(200).json({
-      ok: true,
-      message: "Logout successful",
-    });
+
+    successResponse(res, 200, "Logout successful");
   } catch (err) {
-    res.status(500).json({
-      ok: false,
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
 const userProfile = async (req, res) => {
   try {
     const userData = await User.findById(req.session.userId, { password: 0 });
-    res.status(200).json({
-      ok: true,
-      message: "Returns User Profile",
-      userData,
-    });
+    successResponse(res, 200, "Returns User Profile", userData);
+    // res.status(200).json({
+    //   ok: true,
+    //   message: "Returns User Profile",
+    //   userData,
+    // });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
 const deleteUser = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.session.userId);
-    res.status(200).json({
-      message: "User deleted successfully",
-    });
+    successResponse(res, 200, "User deleted successfully");
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
 const updateUser = async (req, res) => {
   try {
-
     const hashedPassword = await securePassword(req.body.password);
 
     const updatedData = await User.findByIdAndUpdate(
       req.session.userId,
-      { ...req.body, password: hashedPassword, avatar: req.file},
+      { ...req.body, password: hashedPassword, avatar: req.file },
       { new: true }
     );
 
     await updatedData.save();
 
-    if (!updatedData) {
-      return res.status(400).json({
-        ok: false,
-        message: "User was not updated",
-      });
-    }
+    if (!updatedData) errorResponse(res, 400, "User was not updated");
 
-    res.status(200).json({
-      ok: true,
-      message: "User updated successfully",
-    });
+    successResponse(res, 200, "User updated successfully");
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
@@ -264,20 +218,13 @@ const forgetPassword = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(404).json({
-        message: "",
-      });
-    }
+    if (!email || !password)
+      errorResponse(res, 404, "Email or Password is empty");
 
     // check if user exist with the email
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({
-        ok: false,
-        message: "User was not found with this email address",
-      });
-    }
+    if (!user)
+      errorResponse(res, 400, "User was not found with this email address");
 
     // secure the password
     const hashedPassword = await securePassword(password);
@@ -304,41 +251,24 @@ const forgetPassword = async (req, res) => {
 
     await sendEmailWithNodeMailer(emailData);
 
-    res.status(200).json({
-      ok: true,
-      message: "An email has been sent for resetting password",
-      token,
-    });
+    successResponse(res, 200, "An email has been sent for resetting password");
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
 const resetPassword = async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token) {
-      return res.status(404).json({
-        message: "token is missing",
-      });
-    }
+    if (!token) errorResponse(res, 404, "Token is missing");
+
     jwt.verify(token, dev.app.jwtSecretKey, async function (err, decoded) {
-      if (err) {
-        return res.status(401).json({
-          message: "Token has expired.",
-        });
-      }
+      if (err) errorResponse(res, 401, "Token has expired");
 
       const { email, hashedPassword } = decoded;
 
       const userExist = await User.findOne({ email });
-      if (!userExist) {
-        return res.status(400).json({
-          message: "User already with this email",
-        });
-      }
+      if (!userExist) errorResponse(res, 400, "User already with this email");
 
       // update the user
       const updateData = await User.updateOne(
@@ -350,19 +280,13 @@ const resetPassword = async (req, res) => {
         }
       );
 
-      if (!updateData) {
-        return res.status(201).json({
-          message: "Reset password was unsuccessful",
-        });
-      }
-      res.status(201).json({
-        message: "Reset password was successful",
-      });
+      if (!updateData)
+        errorResponse(res, 201, "Reset password was unsuccessful");
+
+      successResponse(res, 201, "Reset password was successful");
     });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    errorResponse(res, 500, err.message);
   }
 };
 
