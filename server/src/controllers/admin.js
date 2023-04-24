@@ -34,25 +34,28 @@ const loginAdmin = async (req, res) => {
     const isPasswordMatch = await comparePassword(password, user.password);
 
     if (!isPasswordMatch) {
-      return res.status(400).json({
-        message: "email/password mismatched",
-      });
+      errorResponse(res, 400, "email/password mismatched")
     }
 
     // create session for user
     req.session.userId = user._id;
 
     // errorResponse(res, 404, "Not an admin");
-    // successResponse(res, 200, "Login successful")
-    res.status(200).json({
-      message: "Login successful",
-      user: {
+    successResponse(res, 200, "Login successful", {user: {
         name: user.name,
         email: user.email,
         avatar: user.avatar,
         phone: user.phone,
-      },
-    });
+      }})
+    // res.status(200).json({
+    //   message: "Login successful",
+    //   user: {
+    //     name: user.name,
+    //     email: user.email,
+    //     avatar: user.avatar,
+    //     phone: user.phone,
+    //   },
+    // });
   } catch (err) {
     errorResponse(res, 500, err.message);
   }

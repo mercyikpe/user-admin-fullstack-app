@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const fs = require('fs');
 
 const User = require("../models/users");
 const dev = require("../config");
@@ -11,12 +12,12 @@ const {
   errorResponse,
   successResponse,
 } = require("../helpers/responseHandlers");
+const {data} = require("express-session/session/cookie");
 
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
-    // const { avatar } = req.file.filename;
-    const avatar = req.file && req.file.filename;
+    const avatar = req.file.path;
 
     // check that form fields are not empty
     if (!name || !email || !password || !phone) {
@@ -98,13 +99,8 @@ const verifyEmail = async (req, res) => {
         password: hashedPassword,
         phone,
         is_verified: true,
+        avatar
       });
-
-      if (avatar) {
-        newUser.avatar;
-        // newUser.avatar.data = fs.readFileSync(avatar.path);
-        // newUser.avatar.contentType = avatar.type;
-      }
 
       // save the user
       const user = await newUser.save();
@@ -112,8 +108,7 @@ const verifyEmail = async (req, res) => {
       if (!user) {
         errorResponse(res, 400, "User was not created");
       }
-
-      successResponse(res, 201, "User was created. Ready to sign in");
+      successResponse(res, 201, "User was created. Ready to sign in", user);
     });
   } catch (err) {
     errorResponse(res, 500, err.message);

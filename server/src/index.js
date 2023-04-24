@@ -13,6 +13,7 @@ const app = express();
 
 const PORT = dev.app.serverPort;
 
+app.use('/public', express.static('public'))
 app.use(cookieParser());
 app.use(cors());
 app.use(morgan("dev"));
