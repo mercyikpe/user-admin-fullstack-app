@@ -47,15 +47,6 @@ const loginAdmin = async (req, res) => {
         avatar: user.avatar,
         phone: user.phone,
       }})
-    // res.status(200).json({
-    //   message: "Login successful",
-    //   user: {
-    //     name: user.name,
-    //     email: user.email,
-    //     avatar: user.avatar,
-    //     phone: user.phone,
-    //   },
-    // });
   } catch (err) {
     errorResponse(res, 500, err.message);
   }
@@ -79,12 +70,6 @@ const getAllUsers = async (req, res) => {
     });
 
     successResponse(res, 200, "Returned all users", users);
-
-    // res.status(200).json({
-    //   ok: true,
-    //   message: "Returned all users",
-    //   users,
-    // });
   } catch (err) {
     errorResponse(res, 500, err.message);
   }
